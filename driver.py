@@ -1,9 +1,8 @@
-# 1000 char limit
-
 import requests
 import datetime
 import xml.etree.ElementTree as ET
 import json
+import re
 
 menuAPI = "https://apps.bowdoin.edu/orestes/api.jsp"
 groupmeAPI = "https://api.groupme.com/v3/bots/post"
@@ -26,66 +25,73 @@ class Meals():
         
         Only handles full hours, so 12:30 p.m. is rounded up to 1 p.m.
         """
-        
+
         currentHour = datetime.datetime.now().time().hour
-        currentDay = datetime.datetime.now().strftime("%a").lower
+        currentDay = datetime.datetime.now().strftime("%a").lower()
         
         if location == Location.MOULTON:
             # Monday–Friday
-                if currentDay != "sat" and currentDay != "sun":
-                    # Breakfast: 7:00 a.m. to 10:00 a.m.
-                    if 0 < currentHour < 10 or 19 < currentHour < 24:
-                        if (currentDay == "fri" and 19 < currentHour < 24):
-                            return Meals.BRUNCH
-                        else:
-                            return Meals.BREAKFAST
-                    # Lunch: 11:00 a.m. to 2:00 p.m.
-                    if 10 < currentHour < 14:
-                        return Meals.LUNCH
-                    # Dinner: 5:00 p.m. to 7:00 p.m.
-                    if 14 < currentHour < 19:
-                        return Meals.DINNER
+            if currentDay != "sat" and currentDay != "sun":
+                # Breakfast: 7:00 a.m. to 10:00 a.m.
+                if 0 <= currentHour < 10 or 19 <= currentHour < 24:
+                    if (currentDay == "fri" and 19 <= currentHour < 24):
+                        return Meals.BRUNCH
+                    else:
+                        return Meals.BREAKFAST
+                # Lunch: 11:00 a.m. to 2:00 p.m.
+                if 10 <= currentHour < 14:
+                    return Meals.LUNCH
+                # Dinner: 5:00 p.m. to 7:00 p.m.
+                if 14 <= currentHour < 19:
+                    return Meals.DINNER
 
             # Saturday–Sunday
-                if currentDay == "sat" or currentDay == "sun":
-                    # Breakfast: 8:00 a.m. to 11:00 a.m.            
-                    if 0 < currentHour < 11 or 19 < currentHour < 24:
-                        if currentDay == "sun" and 19 < currentHour < 24:
-                            return Meals.BREAKFAST
-                        return Meals.BRUNCH
-                    # Brunch: 11:00 a.m. to 12:30 p.m.
-                    if 11 < currentHour < 13:
-                        return Meals.LUNCH
-                    # Dinner: 5:00 p.m. to 7:00 p.m.    
-                    if 13 < currentHour < 19:
-                        return Meals.DINNER
+            if currentDay == "sat" or currentDay == "sun":
+                # Breakfast: 8:00 a.m. to 11:00 a.m.            
+                if 0 <= currentHour < 11 or 19 <= currentHour < 24:
+                    if currentDay == "sun" and 19 <= currentHour < 24:
+                        return Meals.BREAKFAST
+                    return Meals.BRUNCH
+                # Brunch: 11:00 a.m. to 12:30 p.m.
+                if 11 <= currentHour < 13:
+                    return Meals.LUNCH
+                # Dinner: 5:00 p.m. to 7:00 p.m.    
+                if 13 <= currentHour < 19:
+                    return Meals.DINNER
             
         if location == Location.THORNE:
             # Monday–Friday
-                if currentDay != "sat" and currentDay != "sun":
-                    # Breakfast: 8:00 a.m. to 10:00 a.m.
-                    if 0 < currentHour < 10 or 20 < currentHour < 24:
-                        if (currentDay == "fri" and 20 < currentHour < 24):
-                            return Meals.BRUNCH
-                        else:
-                            return Meals.BREAKFAST
-                    # Lunch: 11:30 a.m. to 2:00 p.m.
-                    if 10 < currentHour < 14:
-                        return Meals.LUNCH
-                    # Dinner: 5:00 p.m. to 8:00 p.m.
-                    if 14 < currentHour < 20:
-                        return Meals.DINNER
+            if currentDay != "sat" and currentDay != "sun":
+                # print("Weekday")
+                # Breakfast: 8:00 a.m. to 10:00 a.m.
+                if 0 <= currentHour < 10 or 20 <= currentHour < 24:
+                    if (currentDay == "fri" and 20 <= currentHour < 24):
+                        # print("Brunch")
+                        return Meals.BRUNCH
+                    else:
+                        print("Breakfast")
+                        return Meals.BREAKFAST
+                # Lunch: 11:30 a.m. to 2:00 p.m.
+                if 10 <= currentHour < 14:
+                    # print("Lunch")
+                    return Meals.LUNCH
+                # Dinner: 5:00 p.m. to 8:00 p.m.
+                if 14 <= currentHour < 20:
+                    # print("Dinner")
+                    return Meals.DINNER
 
             # Saturday–Sunday
-                if currentDay == "sat" or currentDay == "sun":
-                    # Brunch: 11:00 a.m. to 1:30 p.m.
-                    if 0 < currentHour < 14 or 20 < currentHour < 24:
-                        if currentDay == "sun" and 20 < currentHour < 24:
-                            return Meals.BREAKFAST
-                        return Meals.BRUNCH
-                    # Dinner:  5:00 p.m. to 7:30 p.m.
-                    if 14 < currentHour < 20:
-                        return Meals.DINNER
+            if currentDay == "sat" or currentDay == "sun":
+                # print("Sat or Sun")
+                
+                # Brunch: 11:00 a.m. to 1:30 p.m.
+                if 0 <= currentHour < 14 or 20 <= currentHour < 24:
+                    if currentDay == "sun" and 20 <= currentHour < 24:
+                        return Meals.BREAKFAST
+                    return Meals.BRUNCH
+                # Dinner:  5:00 p.m. to 7:30 p.m.
+                if 14 <= currentHour < 20:
+                    return Meals.DINNER
     
 def buildRequest(location):
     currentDate = datetime.datetime.now().strftime("%Y%m%d")
@@ -127,19 +133,26 @@ def parseResponse(requestContent):
     
     i = 0
     for item in itemNames:
+        if item: # Sometimes a NoneType item would be returned
+            # Remove consecutive spaces from Strings
+            item = re.sub(r'\s+', ' ', item)
         menu[courseValues[i]].append(item)
         i += 1
         
-    return menu
+    custom_order = ['Main Course', 'Desserts']
+    sorted_menu = {key: menu[key] for key in custom_order if key in menu}
+    sorted_menu.update({key: menu[key] for key in menu if key not in sorted_menu})    
+    
+    return sorted_menu
 
 def stringify(location, menu):
-    meal = Meals.getUpcomingMeal(location).capitalize()
+    meal = Meals.getUpcomingMeal(location)
     
     outputString = ""
     if location is Location.MOULTON:    
-        outputString += f"Moulton Union {meal}!"
+        outputString += f"Moulton Union {meal.capitalize()}:"
     if location is Location.THORNE:    
-        outputString += "Thorne"
+        outputString += f"Thorne {meal.capitalize()}:"
     outputString += '\n\n'
 
     for category, items in menu.items():
@@ -151,8 +164,16 @@ def stringify(location, menu):
     return outputString
 
 def sendMessage(text):
+    jail_date = datetime.datetime(year=2023, month=3, day=29)
+    current_date = datetime.datetime.now()
+    days_difference = (current_date - jail_date).days
+    
+    evan = ""
+    evan += text
+    evan += f"Evan Gershkovich:\n- {days_difference} days"
+    
     data = {
-        'text': text,
+        'text': evan,
         'bot_id': 'a1569b77ca6d3254aaccf6e682'
     }
     
@@ -173,9 +194,11 @@ if __name__ == "__main__":
     
     moulton = request(Location.MOULTON)
     moultonMenu = parseResponse(moulton)
-    
-    # print(json.dumps(thorneMenu, indent=4))
-    # print(json.dumps(moultonMenu, indent=4))
+
+    thorneText = stringify(Location.THORNE, thorneMenu)
+    if len(thorneText) < 1000:
+        sendMessage(thorneText)    
     
     moultonText = stringify(Location.MOULTON, moultonMenu)
-    sendMessage(moultonText)
+    if len(moultonText) < 1000:
+        sendMessage(moultonText)
