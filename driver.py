@@ -1,9 +1,14 @@
+import os
+from dotenv import load_dotenv
 import requests
 import datetime
 import xml.etree.ElementTree as ET
 import json
 import re
 
+load_dotenv()
+
+botID = os.getenv('BOT_ID')
 menuAPI = "https://apps.bowdoin.edu/orestes/api.jsp"
 groupmeAPI = "https://api.groupme.com/v3/bots/post"
 
@@ -174,7 +179,7 @@ def sendMessage(text):
     
     data = {
         'text': evan,
-        'bot_id': 'a1569b77ca6d3254aaccf6e682'
+        'bot_id': botID
     }
     
     headers = {'Content-Type': 'application/json'}
