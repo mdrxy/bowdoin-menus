@@ -160,7 +160,8 @@ def stringify(location, menu):
         for item in items:
             if item != None:
                 outputString += f"- {item}\n"
-        outputString += "\n"
+        if any(menu[category]):
+            outputString += "\n"
 
     return outputString
 
