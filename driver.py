@@ -155,7 +155,8 @@ def stringify(location, menu):
     outputString += '\n\n'
 
     for category, items in menu.items():
-        outputString += f"{category}:\n"
+        if any(menu[category]):
+            outputString += f"{category}:\n"
         for item in items:
             if item != None:
                 outputString += f"- {item}\n"
