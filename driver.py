@@ -146,12 +146,15 @@ def parseResponse(requestContent):
 
 def stringify(location, menu):
     meal = Meals.getUpcomingMeal(location)
+    
+    # Note that this is the timestamp from when the script is called, not the date the menu is being served
+    timestamp = datetime.datetime.now().strftime("%d %b %Y")
 
     outputString = ""
     if location is Location.MOULTON:
-        outputString += f"Moulton Union {meal.capitalize()}:"
+        outputString += f"Moulton Union {meal.capitalize()} - {timestamp}:"
     if location is Location.THORNE:
-        outputString += f"Thorne {meal.capitalize()}:"
+        outputString += f"Thorne {meal.capitalize()} - {timestamp}:"
     outputString += '\n\n'
 
     for category, items in menu.items():
