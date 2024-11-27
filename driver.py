@@ -8,15 +8,17 @@ import re
 
 load_dotenv()
 
-botID = os.getenv('BOT_ID')
+botID = os.getenv("BOT_ID")
 menuAPI = "https://apps.bowdoin.edu/orestes/api.jsp"
 groupmeAPI = "https://api.groupme.com/v3/bots/post"
 
-class Location():
+
+class Location:
     MOULTON = 48
     THORNE = 49
 
-class Meals():
+
+class Meals:
     BREAKFAST = "breakfast"
     BRUNCH = "brunch"
     LUNCH = "lunch"
@@ -37,7 +39,7 @@ class Meals():
             if currentDay != "sat" and currentDay != "sun":
                 # Breakfast: 7:00 a.m. to 10:00 a.m.
                 if 0 <= currentHour < 10 or 19 <= currentHour < 24:
-                    if (currentDay == "fri" and 19 <= currentHour < 24):
+                    if currentDay == "fri" and 19 <= currentHour < 24:
                         return Meals.BRUNCH
                     else:
                         return Meals.BREAKFAST
@@ -68,7 +70,7 @@ class Meals():
 
                 # Breakfast: 8:00 a.m. to 10:00 a.m.
                 if 0 <= currentHour < 10 or 20 <= currentHour < 24:
-                    if (currentDay == "fri" and 20 <= currentHour < 24):
+                    if currentDay == "fri" and 20 <= currentHour < 24:
                         return Meals.BRUNCH
                     else:
                         return Meals.BREAKFAST
@@ -92,17 +94,19 @@ class Meals():
                 if 14 <= currentHour < 20:
                     return Meals.DINNER
 
+
 def buildRequest(location):
     currentDate = datetime.datetime.now().strftime("%Y%m%d")
     locationUnit = location
 
     requestData = {
-        'unit': {locationUnit},
-        'date': {currentDate},
-        'meal': {Meals.getUpcomingMeal(location)}
+        "unit": {locationUnit},
+        "date": {currentDate},
+        "meal": {Meals.getUpcomingMeal(location)},
     }
 
     return requestData
+
 
 def request(location):
     response = requests.post(menuAPI, data=buildRequest(location))
@@ -112,6 +116,7 @@ def request(location):
     else:
         print("Error:", response.status_code)
 
+
 def parseResponse(requestContent):
     root = ET.fromstring(requestContent)
 
@@ -119,10 +124,10 @@ def parseResponse(requestContent):
     itemNames = []
 
     # Iterate over each 'record' element in the XML
-    for record in root.findall('.//record'):
+    for record in root.findall(".//record"):
         # Extract 'course' and 'formal_name' values from each 'record' element
-        course = record.find('course').text
-        webLongName = record.find('webLongName').text
+        course = record.find("course").text
+        webLongName = record.find("webLongName").text
 
         # Append the values to the respective lists
         courseValues.append(course)
@@ -132,21 +137,22 @@ def parseResponse(requestContent):
 
     i = 0
     for item in itemNames:
-        if item: # Sometimes a NoneType item would be returned
+        if item:  # Sometimes a NoneType item would be returned
             # Remove consecutive spaces from Strings
-            item = re.sub(r'\s+', ' ', item)
+            item = re.sub(r"\s+", " ", item)
         menu[courseValues[i]].append(item)
         i += 1
 
-    custom_order = ['Main Course', 'Desserts']
+    custom_order = ["Main Course", "Desserts"]
     sorted_menu = {key: menu[key] for key in custom_order if key in menu}
-    sorted_menu.update({key: menu[key] for key in menu if key not in sorted_menu})    
+    sorted_menu.update({key: menu[key] for key in menu if key not in sorted_menu})
 
     return sorted_menu
 
+
 def stringify(location, menu):
     meal = Meals.getUpcomingMeal(location)
-    
+
     # Note that this is the timestamp from when the script is called, not the date the menu is being served
     timestamp = datetime.datetime.now().strftime("%d %b %Y")
 
@@ -155,7 +161,7 @@ def stringify(location, menu):
         outputString += f"Moulton Union {meal.capitalize()} - {timestamp}:"
     if location is Location.THORNE:
         outputString += f"Thorne {meal.capitalize()} - {timestamp}:"
-    outputString += '\n\n'
+    outputString += "\n\n"
 
     for category, items in menu.items():
         if any(menu[category]):
@@ -168,15 +174,14 @@ def stringify(location, menu):
 
     return outputString
 
-def sendMessage(text):
-    data = {
-        'text': text,
-        'bot_id': botID
-    }
 
-    headers = {'Content-Type': 'application/json'}
+def sendMessage(text):
+    data = {"text": text, "bot_id": botID}
+
+    headers = {"Content-Type": "application/json"}
 
     response = requests.post(groupmeAPI, data=json.dumps(data), headers=headers)
+
 
 if __name__ == "__main__":
     thorne = request(Location.THORNE)
