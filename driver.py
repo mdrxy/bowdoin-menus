@@ -1,6 +1,7 @@
 """
 Module to retrieve and send the current menu for Moulton Union and Thorne Hall.
 """
+
 import os
 import datetime
 import json
@@ -20,6 +21,7 @@ class Location:
     """
     Represents the location of the menu.
     """
+
     MOULTON = 48
     THORNE = 49
 
@@ -28,6 +30,7 @@ class Meals:
     """
     Represents the meal period.
     """
+
     BREAKFAST = "breakfast"
     BRUNCH = "brunch"
     LUNCH = "lunch"
@@ -171,11 +174,15 @@ def parse_response(request_content):
 def stringify(location, menu):
     """
     Converts the menu dictionary into a formatted string.
-    
+
     Parameters:
     - location: The location of the menu (Moulton or Thorne).
     - menu: The menu dictionary to be converted.
     """
+    # Ensure the menu has at least one item
+    if not any(menu.values()):
+        return ""  # Return an empty string if the menu is empty
+
     meal = Meals().get_upcoming_meal(location)
 
     # Note that this is the timestamp from when the script is called
@@ -204,7 +211,7 @@ def stringify(location, menu):
 def send_message(text):
     """
     POSTs a message to the GroupMe bot.
-    
+
     Parameters:
     - text: The message to be sent.
     """
@@ -212,7 +219,9 @@ def send_message(text):
 
     headers = {"Content-Type": "application/json"}
 
-    response = requests.post(GROUPME_API, data=json.dumps(data), headers=headers, timeout=10)
+    response = requests.post(
+        GROUPME_API, data=json.dumps(data), headers=headers, timeout=10
+    )
     return response
 
 
