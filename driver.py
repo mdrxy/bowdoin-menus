@@ -131,8 +131,7 @@ def request(location):
 
     if response.status_code == 200:
         return response.content
-    else:
-        print("Error:", response.status_code)
+    print("Error:", response.status_code)
 
 
 def parse_response(request_content):
@@ -141,14 +140,25 @@ def parse_response(request_content):
     """
     root = ET.fromstring(request_content)
 
+    # Check if the response contains an error
+    error_element = root.find(".//error")
+    if error_element is not None:
+        error_message = error_element.text
+        print(f"Error: {error_message}")
+        return None  # Return None to indicate no menu data
+
     course_values = []
     item_names = []
 
     # Iterate over each 'record' element in the XML
     for record in root.findall(".//record"):
         # Extract 'course' and 'formal_name' values from each 'record' element
-        course = record.find("course").text
-        web_long_name = record.find("web_long_name").text
+        course_element = record.find("course")
+        course = course_element.text if course_element is not None else "Uncategorized"
+        web_long_name_element = record.find("webLongName")
+        web_long_name = (
+            web_long_name_element.text if web_long_name_element is not None else None
+        )
 
         # Append the values to the respective lists
         course_values.append(course)
@@ -179,6 +189,10 @@ def stringify(location, menu):
     - location: The location of the menu (Moulton or Thorne).
     - menu: The menu dictionary to be converted.
     """
+    if menu is None:
+        location_name = "Moulton Union" if location == Location.MOULTON else "Thorne"
+        return f"No menu data available for {location_name}, sad :()"
+
     # Ensure the menu has at least one item
     if not any(menu.values()):
         return ""  # Return an empty string if the menu is empty
@@ -227,15 +241,23 @@ def send_message(text):
 
 if __name__ == "__main__":
     thorne = request(Location.THORNE)
+    print("Thorne content:", thorne)
     thorneMenu = parse_response(thorne)
 
     moulton = request(Location.MOULTON)
+    print("Moulton content:", moulton)
     moultonMenu = parse_response(moulton)
 
+    # Handle Thorne Menu
     thorneText = stringify(Location.THORNE, thorneMenu)
-    if len(thorneText) < 1000:
+    if thorneText and len(thorneText) < 1000:
         send_message(thorneText)
+    else:
+        print(thorneText)
 
+    # Handle Moulton Menu
     moultonText = stringify(Location.MOULTON, moultonMenu)
-    if len(moultonText) < 1000:
+    if moultonText and len(moultonText) < 1000:
         send_message(moultonText)
+    else:
+        print(moultonText)
