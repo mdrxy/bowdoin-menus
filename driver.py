@@ -15,7 +15,7 @@ import logging
 # LOGGING CONFIGURATION
 # ----------------------------------------------------------------------
 logging.basicConfig(
-    filename="script.log",  # <--- Save logs to this file
+    filename="/var/log/bowdoin_menus.log",
     filemode="a",  # or "w" to overwrite each run
     level=logging.DEBUG,
     format="%(asctime)s [%(levelname)s] %(message)s",
