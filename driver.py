@@ -9,10 +9,26 @@ import re
 import xml.etree.ElementTree as ET
 from dotenv import load_dotenv
 import requests
+import logging
+
+# ----------------------------------------------------------------------
+# LOGGING CONFIGURATION
+# ----------------------------------------------------------------------
+logging.basicConfig(
+    filename="script.log",  # <--- Save logs to this file
+    filemode="a",  # or "w" to overwrite each run
+    level=logging.DEBUG,
+    format="%(asctime)s [%(levelname)s] %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S",
+)
+# ----------------------------------------------------------------------
 
 load_dotenv()
 
 botID = os.getenv("BOT_ID")
+if not botID:
+    raise ValueError("BOT_ID environment variable is missing or empty!")
+
 MENU_API = "https://apps.bowdoin.edu/orestes/api.jsp"
 GROUPME_API = "https://api.groupme.com/v3/bots/post"
 
@@ -34,6 +50,7 @@ def set_closed_message_sent():
     """
     Creates a file to indicate that we have sent the 'closed' message.
     """
+    logging.info("Setting closed-state file to mark 'closed' message as sent.")
     with open(CLOSED_STATE_FILE, "w") as f:
         f.write("CLOSED")
 
@@ -44,6 +61,7 @@ def clear_closed_message_state():
     send the closed message again in the future if needed.
     """
     if os.path.isfile(CLOSED_STATE_FILE):
+        logging.info("Removing closed-state file to allow future 'closed' messages.")
         os.remove(CLOSED_STATE_FILE)
 
 
@@ -77,13 +95,15 @@ class Meals:
         """
         current_hour = datetime.datetime.now().time().hour
         current_day = datetime.datetime.now().strftime("%a").lower()
+        logging.debug(
+            f"Determining upcoming meal for location={location}, day={current_day}, hour={current_hour}."
+        )
 
         if location == Location.MOULTON:
             # Monday–Friday
             if current_day not in ["sat", "sun"]:
                 # Breakfast: 7:00 a.m. to 10:00 a.m.
                 if 0 <= current_hour < 10 or 19 <= current_hour < 24:
-                    # Late Friday transitions to Brunch (Sat)
                     if current_day == "fri" and 19 <= current_hour < 24:
                         return Meals.BRUNCH
                     else:
@@ -99,7 +119,6 @@ class Meals:
             if current_day in ["sat", "sun"]:
                 # Breakfast: 8:00 a.m. to 11:00 a.m.
                 if 0 <= current_hour < 11 or 19 <= current_hour < 24:
-                    # Late Sunday transitions to Breakfast (Mon)?
                     if current_day == "sun" and 19 <= current_hour < 24:
                         return Meals.BREAKFAST
                     return Meals.BRUNCH
@@ -137,19 +156,25 @@ class Meals:
                 if 14 <= current_hour < 20:
                     return Meals.DINNER
 
+        # If we got here without returning, fallback to breakfast
+        logging.debug("Meal not found in normal schedule, defaulting to BREAKFAST.")
+        return Meals.BREAKFAST
+
 
 def build_request(location):
     """
     Builds the request data to be sent to the menu API.
     """
     current_date = datetime.datetime.now().strftime("%Y%m%d")
-    location_unit = location
-
+    meal = Meals().get_upcoming_meal(location)
     request_data = {
-        "unit": {location_unit},
+        "unit": {location},
         "date": {current_date},
-        "meal": {Meals().get_upcoming_meal(location)},
+        "meal": {meal},
     }
+    logging.info(
+        f"Building menu request for location={location}, date={current_date}, meal={meal}."
+    )
     return request_data
 
 
@@ -157,10 +182,13 @@ def request(location):
     """
     Makes a POST request to the menu API.
     """
-    response = requests.post(MENU_API, data=build_request(location), timeout=10)
+    data = build_request(location)
+    logging.info(f"Sending POST request to the menu API for location={location}.")
+    response = requests.post(MENU_API, data=data, timeout=10)
     if response.status_code == 200:
+        logging.debug("Received a 200 OK from menu API.")
         return response.content
-    print("Error calling menu API:", response.status_code)
+    logging.error("Error calling menu API: %s", response.status_code)
     return None
 
 
@@ -170,12 +198,13 @@ def parse_response(request_content):
     returns a dictionary like { 'Main Course': [...], 'Desserts': [...], ... }.
     If there's no data or an error is returned, we return None to indicate no menu.
     """
+    logging.debug("Parsing XML response from the menu API.")
     root = ET.fromstring(request_content)
 
     # Check if the response contains an <error> node with "No records found"
     error_element = root.find(".//error")
     if error_element is not None:
-        # If "No records found" then just return None (meaning empty menu)
+        logging.info("No records found (or error) in the XML response.")
         return None
 
     course_values = []
@@ -214,6 +243,7 @@ def parse_response(request_content):
 
     # If there's absolutely nothing in sorted_menu, treat as None
     if not any(sorted_menu.values()):
+        logging.info("Menu is empty after sorting.")
         return None
 
     return sorted_menu
@@ -225,21 +255,18 @@ def stringify(location, menu):
     If there's no menu (None or empty), returns an empty string.
     """
     if menu is None:
-        # Return empty string, meaning "no data"
+        logging.debug(f"No menu data for location={location}. Returning empty string.")
         return ""
 
     if not any(menu.values()):
-        # Also empty
+        logging.debug(f"Menu dictionary is empty for location={location}.")
         return ""
 
     meal = Meals().get_upcoming_meal(location)
     timestamp = datetime.datetime.now().strftime("%d %b %Y")
-
-    # Format the header
     loc_name = "Moulton Union" if location == Location.MOULTON else "Thorne"
-    output_string = f"{loc_name} {meal.capitalize()} - {timestamp}:\n\n"
 
-    # Add each category and items
+    output_string = f"{loc_name} {meal.capitalize()} - {timestamp}:\n\n"
     for category, items in menu.items():
         if items:
             output_string += f"{category}:\n"
@@ -255,19 +282,26 @@ def send_message(text):
     """
     Sends a message to GroupMe via POST.
     """
+    logging.info("Sending message to GroupMe bot.")
     data = {"text": text, "bot_id": botID}
     headers = {"Content-Type": "application/json"}
     try:
         response = requests.post(
             GROUPME_API, data=json.dumps(data), headers=headers, timeout=10
         )
+        if response.status_code != 202:
+            logging.warning(f"GroupMe API responded with status {response.status_code}")
+        else:
+            logging.debug("Message accepted by GroupMe API.")
         return response
     except requests.exceptions.RequestException as e:
-        print("Error sending message:", e)
+        logging.error("Error sending message to GroupMe: %s", e)
         return None
 
 
 if __name__ == "__main__":
+    logging.info("Starting the menu retrieval script.")
+
     # 1. Request the data for both halls
     thorne_xml = request(Location.THORNE)
     moulton_xml = request(Location.MOULTON)
@@ -282,27 +316,36 @@ if __name__ == "__main__":
 
     # 4. Check if both are empty => "closed" logic
     if not thorne_text and not moulton_text:
-        # Both empty => possibly "closed"
         if not has_closed_message_already_been_sent():
-            # We haven't announced closed yet => do it once
+            logging.info("Both dining halls appear closed, sending closed message.")
             send_message("The campus dining halls are closed.")
             set_closed_message_sent()
         else:
-            # Already announced => do nothing
-            pass
+            logging.info(
+                "Both dining halls still appear closed, but we've already sent the message."
+            )
     else:
-        # At least one has data => clear the "closed" state
+        logging.info("At least one dining hall has data => clearing closed state.")
         clear_closed_message_state()
 
         # If Thorne has menu text, send it
-        if thorne_text and len(thorne_text) < 1000:
-            send_message(thorne_text)
-        elif thorne_text:
-            # If it's >1000 chars, do something else (like chunk it), or just print for debugging
-            print(thorne_text)
+        if thorne_text:
+            if len(thorne_text) < 1000:
+                send_message(thorne_text)
+            else:
+                logging.warning(
+                    "Thorne text is too long to send (>1000 chars). Printing locally."
+                )
+                print(thorne_text)
 
         # If Moulton has menu text, send it
-        if moulton_text and len(moulton_text) < 1000:
-            send_message(moulton_text)
-        elif moulton_text:
-            print(moulton_text)
+        if moulton_text:
+            if len(moulton_text) < 1000:
+                send_message(moulton_text)
+            else:
+                logging.warning(
+                    "Moulton text is too long to send (>1000 chars). Printing locally."
+                )
+                print(moulton_text)
+
+    logging.info("Menu retrieval script finished.")
