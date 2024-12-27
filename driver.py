@@ -16,6 +16,37 @@ botID = os.getenv("BOT_ID")
 MENU_API = "https://apps.bowdoin.edu/orestes/api.jsp"
 GROUPME_API = "https://api.groupme.com/v3/bots/post"
 
+# -- FILE-BASED CLOSED-STATE TRACKING --
+CLOSED_STATE_FILE = "closed_state.txt"
+
+
+def has_closed_message_already_been_sent():
+    """
+    Returns True if a file exists indicating we've already sent the
+    'The campus dining halls are closed.' message.
+    """
+    return os.path.isfile(CLOSED_STATE_FILE)
+
+
+def set_closed_message_sent():
+    """
+    Creates a file to indicate that we have already sent the 'closed' message.
+    """
+    with open(CLOSED_STATE_FILE, "w") as f:
+        f.write("CLOSED\n")
+
+
+def clear_closed_message_state():
+    """
+    Removes the file if it exists, signifying that the campus is
+    not closed or has reopened for future checks.
+    """
+    if os.path.isfile(CLOSED_STATE_FILE):
+        os.remove(CLOSED_STATE_FILE)
+
+
+# --------------------------------------
+
 
 class Location:
     """
@@ -79,14 +110,12 @@ class Meals:
         if location == Location.THORNE:
             # Monday–Friday
             if current_day != "sat" and current_day != "sun":
-
                 # Breakfast: 8:00 a.m. to 10:00 a.m.
                 if 0 <= current_hour < 10 or 20 <= current_hour < 24:
                     if current_day == "fri" and 20 <= current_hour < 24:
                         return Meals.BRUNCH
                     else:
                         return Meals.BREAKFAST
-
                 # Lunch: 11:30 a.m. to 2:00 p.m.
                 if 10 <= current_hour < 14:
                     return Meals.LUNCH
@@ -96,7 +125,6 @@ class Meals:
 
             # Saturday–Sunday
             if current_day == "sat" or current_day == "sun":
-
                 # Brunch: 11:00 a.m. to 1:30 p.m.
                 if 0 <= current_hour < 14 or 20 <= current_hour < 24:
                     if current_day == "sun" and 20 <= current_hour < 24:
@@ -152,7 +180,7 @@ def parse_response(request_content):
 
     # Iterate over each 'record' element in the XML
     for record in root.findall(".//record"):
-        # Extract 'course' and 'formal_name' values from each 'record' element
+        # Extract 'course' and 'formal_name' values
         course_element = record.find("course")
         course = course_element.text if course_element is not None else "Uncategorized"
         web_long_name_element = record.find("webLongName")
@@ -160,7 +188,6 @@ def parse_response(request_content):
             web_long_name_element.text if web_long_name_element is not None else None
         )
 
-        # Append the values to the respective lists
         course_values.append(course)
         item_names.append(web_long_name)
 
@@ -168,12 +195,13 @@ def parse_response(request_content):
 
     i = 0
     for item in item_names:
-        if item:  # Sometimes a NoneType item would be returned
-            # Remove consecutive spaces from Strings
+        # Sometimes a NoneType item would be returned; also remove consecutive spaces
+        if item:
             item = re.sub(r"\s+", " ", item)
         menu[course_values[i]].append(item)
         i += 1
 
+    # Sort keys to put certain categories on top
     custom_order = ["Main Course", "Desserts"]
     sorted_menu = {key: menu[key] for key in custom_order if key in menu}
     sorted_menu.update({key: menu[key] for key in menu if key not in sorted_menu})
@@ -184,39 +212,34 @@ def parse_response(request_content):
 def stringify(location, menu):
     """
     Converts the menu dictionary into a formatted string.
-
-    Parameters:
-    - location: The location of the menu (Moulton or Thorne).
-    - menu: The menu dictionary to be converted.
+    Returns an empty string if the menu is None or if there are no items.
     """
+
+    # If None, interpret as "No menu data"
     if menu is None:
-        location_name = "Moulton Union" if location == Location.MOULTON else "Thorne"
-        return f"No menu data available for {location_name}, sad :()"
+        return ""  # We return empty here so we don't auto-send "No menu data..."
 
-    # Ensure the menu has at least one item
+    # If the menu is empty or no items, also return empty
     if not any(menu.values()):
-        return ""  # Return an empty string if the menu is empty
+        return ""
 
+    # Otherwise, build the string
     meal = Meals().get_upcoming_meal(location)
-
-    # Note that this is the timestamp from when the script is called
-    # (not the date the menu is being served)
     timestamp = datetime.datetime.now().strftime("%d %b %Y")
 
-    output_string = ""
     if location is Location.MOULTON:
-        output_string += f"Moulton Union {meal.capitalize()} - {timestamp}:"
-    if location is Location.THORNE:
-        output_string += f"Thorne {meal.capitalize()} - {timestamp}:"
-    output_string += "\n\n"
+        location_name = "Moulton Union"
+    else:
+        location_name = "Thorne"
 
+    output_string = f"{location_name} {meal.capitalize()} - {timestamp}:\n\n"
     for category, items in menu.items():
-        if any(menu[category]):
+        if any(items):
             output_string += f"{category}:\n"
         for item in items:
-            if item is not None:
+            if item:
                 output_string += f"- {item}\n"
-        if any(menu[category]):
+        if any(items):
             output_string += "\n"
 
     return output_string
@@ -225,12 +248,8 @@ def stringify(location, menu):
 def send_message(text):
     """
     POSTs a message to the GroupMe bot.
-
-    Parameters:
-    - text: The message to be sent.
     """
     data = {"text": text, "bot_id": botID}
-
     headers = {"Content-Type": "application/json"}
 
     response = requests.post(
@@ -240,24 +259,41 @@ def send_message(text):
 
 
 if __name__ == "__main__":
-    thorne = request(Location.THORNE)
-    print("Thorne content:", thorne)
-    thorneMenu = parse_response(thorne)
 
-    moulton = request(Location.MOULTON)
-    print("Moulton content:", moulton)
-    moultonMenu = parse_response(moulton)
+    # 1. Request & parse menus
+    thorne_data = request(Location.THORNE)
+    moulton_data = request(Location.MOULTON)
 
-    # Handle Thorne Menu
-    thorneText = stringify(Location.THORNE, thorneMenu)
-    if thorneText and len(thorneText) < 1000:
-        send_message(thorneText)
+    thorne_menu = parse_response(thorne_data) if thorne_data else None
+    moulton_menu = parse_response(moulton_data) if moulton_data else None
+
+    # 2. Convert each to a string, or empty if None/no items
+    thorne_text = stringify(Location.THORNE, thorne_menu)
+    moulton_text = stringify(Location.MOULTON, moulton_menu)
+
+    # 3. Check if both are empty => Possibly send "closed" or do nothing
+    if not thorne_text and not moulton_text:
+        # Both are empty
+        if not has_closed_message_already_been_sent():
+            # Send "closed" message only if we haven't already
+            send_message("The campus dining halls are closed.")
+            set_closed_message_sent()
+        else:
+            # We have already announced it's closed, do nothing
+            pass
     else:
-        print(thorneText)
+        # At least one menu is present
+        # Clear closed state so that if it happens in a future cycle again,
+        # we can re-send the "closed" message
+        clear_closed_message_state()
 
-    # Handle Moulton Menu
-    moultonText = stringify(Location.MOULTON, moultonMenu)
-    if moultonText and len(moultonText) < 1000:
-        send_message(moultonText)
-    else:
-        print(moultonText)
+        # 4. Send whichever texts are non-empty
+        if thorne_text and len(thorne_text) < 1000:
+            send_message(thorne_text)
+        elif thorne_text:  # If it is longer than 1000 or so, do something else
+            print(thorne_text)
+
+        if moulton_text and len(moulton_text) < 1000:
+            send_message(moulton_text)
+        elif moulton_text:
+            print(moulton_text)
