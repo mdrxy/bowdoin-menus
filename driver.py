@@ -299,6 +299,27 @@ def send_message(text):
         return None
 
 
+def get_now_playing():
+    """
+    Using WBOR's API, gets the currently playing song.
+
+    https://api-1.wbor.org/spins/get
+    """
+    logging.info("Retrieving currently playing song from WBOR API.")
+    try:
+        response = requests.get("https://api-1.wbor.org/spins/get", timeout=10)
+        if response.status_code == 200:
+            data = response.json()
+            if data["spin-0"]:
+                song = data["spin-0"]["song"]
+                artist = data["spin-0"]["artist"]
+                return {"song": song, "artist": artist}
+        logging.error("Error calling WBOR API: %s", response.status_code)
+    except requests.exceptions.RequestException as e:
+        logging.error("Error calling WBOR API: %s", e)
+    return None
+
+
 if __name__ == "__main__":
     logging.info("Starting the menu retrieval script.")
 
@@ -327,6 +348,24 @@ if __name__ == "__main__":
     else:
         logging.info("At least one dining hall has data => clearing closed state.")
         clear_closed_message_state()
+
+        now_playing = get_now_playing()
+
+        if thorne_text and moulton_text:
+            logging.info("Both dining halls have menu data.")
+            logging.info("Append now playing song info to Moulton's menu.")
+            if now_playing:
+                moulton_text += f"Now playing on WBOR.org: {now_playing['song']} by {now_playing['artist']}"
+        else:
+            logging.info("Only one dining hall has menu data.")
+            logging.info(
+                "Add the now playing song info to the menu of the hall that has data."
+            )
+            if now_playing:
+                if thorne_text:
+                    thorne_text += f"Now playing on WBOR.org: {now_playing['song']} by {now_playing['artist']}"
+                if moulton_text:
+                    moulton_text += f"Now playing on WBOR.org: {now_playing['song']} by {now_playing['artist']}"
 
         # If Thorne has menu text, send it
         if thorne_text:
