@@ -308,13 +308,16 @@ def get_now_playing():
     """
     logging.info("Retrieving currently playing song from WBOR API.")
     try:
-        response = requests.get("https://api-1.wbor.org/spins/get", timeout=10)
+        response = requests.get(
+            "https://azura.wbor.org/api/station/2/nowplaying", timeout=10
+        )
         if response.status_code == 200:
             data = response.json()
-            if data["spin-0"]:
-                song = data["spin-0"]["song"]
-                artist = data["spin-0"]["artist"]
-                return {"song": song, "artist": artist}
+            if data["now_playing"]["song"]:
+                song = data["now_playing"]["song"]["title"]
+                artist = data["now_playing"]["song"]["artist"]
+                elapsed = data["now_playing"]["elapsed"]
+                return {"song": song, "artist": artist, "elapsed": elapsed}
         logging.error("Error calling WBOR API: %s", response.status_code)
     except requests.exceptions.RequestException as e:
         logging.error("Error calling WBOR API: %s", e)
@@ -351,18 +354,19 @@ if __name__ == "__main__":
         clear_closed_message_state()
 
         now_playing = get_now_playing()
+        expired = now_playing and now_playing["elapsed"] > 900
 
         if thorne_text and moulton_text:
             logging.info("Both dining halls have menu data.")
             logging.info("Append now playing song info to Moulton's menu.")
-            if now_playing:
+            if now_playing and not expired:
                 moulton_text += f"Now playing on WBOR.org: {now_playing['song']} by {now_playing['artist']}"
         else:
             logging.info("Only one dining hall has menu data.")
             logging.info(
                 "Add the now playing song info to the menu of the hall that has data."
             )
-            if now_playing:
+            if now_playing and not expired:
                 if thorne_text:
                     thorne_text += f"Now playing on WBOR.org: {now_playing['song']} by {now_playing['artist']}"
                 if moulton_text:
