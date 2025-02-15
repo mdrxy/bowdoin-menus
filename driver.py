@@ -10,6 +10,12 @@ import xml.etree.ElementTree as ET
 from dotenv import load_dotenv
 import requests
 import logging
+from tenacity import (
+    retry,
+    wait_exponential,
+    stop_after_attempt,
+    retry_if_exception_type,
+)
 
 # ----------------------------------------------------------------------
 # LOGGING CONFIGURATION
@@ -37,6 +43,36 @@ GROUPME_API = "https://api.groupme.com/v3/bots/post"
 # CLOSED-STATE TRACKING
 # ----------------------------------------------------------------------
 CLOSED_STATE_FILE = "closed_state.txt"
+
+
+# ----------------------------------------------------------------------
+# RETRY DECORATOR FOR HTTP REQUESTS
+# ----------------------------------------------------------------------
+@retry(
+    wait=wait_exponential(
+        multiplier=1, min=2, max=10
+    ),  # Exponential backoff (2s, 4s, 8s...)
+    stop=stop_after_attempt(3),  # Stop after 3 failed attempts
+    retry=retry_if_exception_type(
+        requests.exceptions.RequestException
+    ),  # Retry on request failures
+)
+def make_post_request(url, data, headers=None, timeout=10):
+    """Helper function to make a POST request with retry logic."""
+    return requests.post(url, data=data, headers=headers, timeout=timeout)
+
+
+@retry(
+    wait=wait_exponential(multiplier=1, min=2, max=10),
+    stop=stop_after_attempt(3),
+    retry=retry_if_exception_type(requests.exceptions.RequestException),
+)
+def make_get_request(url, timeout=10):
+    """Helper function to make a GET request with retry logic."""
+    return requests.get(url, timeout=timeout)
+
+
+# ----------------------------------------------------------------------
 
 
 def has_closed_message_already_been_sent():
@@ -181,15 +217,20 @@ def build_request(location):
 
 def request(location):
     """
-    Makes a POST request to the menu API.
+    Makes a POST request to the menu API with retry logic.
     """
     data = build_request(location)
     logging.info(f"Sending POST request to the menu API for location={location}.")
-    response = requests.post(MENU_API, data=data, timeout=10)
-    if response.status_code == 200:
-        logging.debug("Received a 200 OK from menu API.")
-        return response.content
-    logging.error("Error calling menu API: %s", response.status_code)
+
+    try:
+        response = make_post_request(MENU_API, data)
+        if response.status_code == 200:
+            logging.debug("Received a 200 OK from menu API.")
+            return response.content
+        logging.error("Error calling menu API: %s", response.status_code)
+    except requests.exceptions.RequestException as e:
+        logging.error("Failed to retrieve menu data: %s", e)
+
     return None
 
 
@@ -200,7 +241,12 @@ def parse_response(request_content):
     If there's no data or an error is returned, we return None to indicate no menu.
     """
     logging.debug("Parsing XML response from the menu API.")
-    root = ET.fromstring(request_content)
+
+    try:
+        root = ET.fromstring(request_content)
+    except ET.ParseError as e:
+        logging.error("Failed to parse XML response: %s", e)
+        return None
 
     # Check if the response contains an <error> node with "No records found"
     error_element = root.find(".//error")
@@ -281,19 +327,15 @@ def stringify(location, menu):
 
 def send_message(text):
     """
-    Sends a message to GroupMe via POST.
+    Sends a message to GroupMe via POST with retry logic.
     """
     logging.info("Sending message to GroupMe bot.")
     data = {"text": text, "bot_id": botID}
     headers = {"Content-Type": "application/json"}
     try:
-        response = requests.post(
-            GROUPME_API, data=json.dumps(data), headers=headers, timeout=10
-        )
+        response = make_post_request(GROUPME_API, json.dumps(data), headers=headers)
         if response.status_code != 202:
             logging.warning(f"GroupMe API responded with status {response.status_code}")
-        else:
-            logging.debug("Message accepted by GroupMe API.")
         return response
     except requests.exceptions.RequestException as e:
         logging.error("Error sending message to GroupMe: %s", e)
@@ -302,18 +344,16 @@ def send_message(text):
 
 def get_now_playing():
     """
-    Using WBOR's API, gets the currently playing song.
+    Using WBOR's API, gets the currently playing song with retry logic.
 
     https://api-1.wbor.org/spins/get
     """
     logging.info("Retrieving currently playing song from WBOR API.")
     try:
-        response = requests.get(
-            "https://azura.wbor.org/api/station/2/nowplaying", timeout=10
-        )
+        response = make_get_request("https://azura.wbor.org/api/station/2/nowplaying")
         if response.status_code == 200:
             data = response.json()
-            if data["now_playing"]["song"]:
+            if "now_playing" in data and "song" in data["now_playing"]:
                 song = data["now_playing"]["song"]["title"]
                 artist = data["now_playing"]["song"]["artist"]
                 elapsed = data["now_playing"]["elapsed"]
