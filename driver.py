@@ -560,7 +560,8 @@ if __name__ == "__main__":
         for text, label in ((thorne_text, "Thorne"), (moulton_text, "Moulton")):
             if text:
                 if len(text) < 1000:
-                    send_message(text)
+                    if not send_message(text):
+                        logging.error("Failed to send GroupMe message for `%s`", label)
                 else:
                     logging.critical(
                         "`%s` text is too long to send (>1000 chars). Printing locally...",
