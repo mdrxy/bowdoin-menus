@@ -9,6 +9,7 @@ import logging
 import os
 import re
 import xml.etree.ElementTree as ET
+from pathlib import Path
 
 import requests
 from dotenv import load_dotenv
@@ -105,7 +106,7 @@ def clear_closed_message_state():
     Removes the file if it exists, signifying that we can send the
     closed message again in the future if needed.
     """
-    if os.path.isfile(CLOSED_STATE_FILE):
+    if Path(CLOSED_STATE_FILE).exists():
         logging.info("Removing closed-state file to allow future 'closed' messages.")
         os.remove(CLOSED_STATE_FILE)
 
@@ -373,7 +374,11 @@ def get_current_spin_details() -> dict:
     try:
         response = make_get_request(url)
         if response.status_code == 200:
-            data = response.json()
+            try:
+                data = response.json()
+            except json.JSONDecodeError as e:
+                logging.error("Failed to parse JSON from Spinitron: %s", e)
+                return None
             spins = data.get("items", [])
             logging.debug("Received %d spins", len(spins))
             if not spins:
@@ -423,6 +428,10 @@ def get_persona_name(p_id: int) -> str:
     """
     Get the persona name from an ID using a Spinitron API proxy (WBOR's) with retry logic.
     """
+    if not isinstance(p_id, int):
+        logging.warning("Invalid persona ID: %s", p_id)
+        return None
+
     url = SPINITRON_PROXY_BASE + f"/personas/{p_id}"
     logging.info("Retrieving persona name from `%s`", url)
     try:
@@ -564,7 +573,8 @@ if __name__ == "__main__":
                         logging.error("Failed to send GroupMe message for `%s`", label)
                 else:
                     logging.critical(
-                        "`%s` text is too long to send (>1000 chars). Printing locally...",
+                        "`%s` text is too long to send (>1000 chars).",
                         label,
                     )
-                    print(text)
+                    # Print so that we get an email from cron
+                    print(f"{label} text is too long to send (>1000 chars).")
