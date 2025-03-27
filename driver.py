@@ -511,25 +511,36 @@ if __name__ == "__main__":
         logging.info("At least one dining hall has data; clearing closed state...")
         clear_closed_message_state()
 
-        now_playing = get_current_spin_details()
-        playlist = get_current_playlist_details()
-        CURRENTLY_AUTOMATED = bool(playlist.get("automation")) if playlist else None
-        logging.debug("Currently playing automation: `%s`", CURRENTLY_AUTOMATED)
-        PERSONA_ID = playlist.get("persona_id") if playlist else None
-        PERSONA_NAME = get_persona_name(PERSONA_ID) if PERSONA_ID else None
+        try:
+            now_playing = get_current_spin_details()
+            playlist = get_current_playlist_details()
+            CURRENTLY_AUTOMATED = bool(playlist.get("automation")) if playlist else None
+            logging.debug("Currently playing automation: `%s`", CURRENTLY_AUTOMATED)
+            PERSONA_ID = playlist.get("persona_id") if playlist else None
+            PERSONA_NAME = get_persona_name(PERSONA_ID) if PERSONA_ID else None
 
-        CURRENTLY_AUTOMATED = False  # TESTING
-        if playlist and CURRENTLY_AUTOMATED:
-            logging.debug("Automation playlist detected; skipping song info.")
+            if playlist and CURRENTLY_AUTOMATED:
+                logging.debug("Automation playlist detected; skipping song info.")
+                SONG_INFO = ""
+            elif now_playing and now_playing["elapsed"] <= 900:
+                SONG_INFO = (
+                    f"Now playing on WBOR(.org): {now_playing.get('artist', '')} -"
+                    f" {now_playing['song']} on {playlist['title']} with {PERSONA_NAME}"
+                )
+                logging.debug("Song info: `%s`", SONG_INFO)
+            else:
+                logging.debug("Some other condition; skipping song info.")
+                SONG_INFO = ""
+        except (
+            KeyError,
+            TypeError,
+            ValueError,
+            requests.exceptions.RequestException,
+        ) as e:
+            logging.error("Error retrieving or formatting WBOR song info: %s", e)
             SONG_INFO = ""
-        elif now_playing and now_playing["elapsed"] <= 900:
-            SONG_INFO = (
-                f"Now playing on WBOR(.org): {now_playing.get("artist", "")} -"
-                f" {now_playing["song"]} on {playlist["title"]} with {PERSONA_NAME}"
-            )
-            logging.debug("Song info: `%s`", SONG_INFO)
-        else:
-            logging.debug("Some other condition; skipping song info.")
+        except Exception as e:  # pylint: disable=broad-except
+            logging.error("Unexpected error: %s", e)
             SONG_INFO = ""
 
         if SONG_INFO:
