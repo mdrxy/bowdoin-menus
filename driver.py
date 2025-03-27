@@ -23,8 +23,8 @@ from tenacity import (
 # LOGGING CONFIGURATION
 # ----------------------------------------------------------------------
 logging.basicConfig(
-    # filename="./bowdoin_menus.log",
-    filename="/home/wbor/bowdoin-menus/bowdoin_menus.log",  # for production
+    filename="./bowdoin_menus.log",
+    # filename="/home/wbor/bowdoin-menus/bowdoin_menus.log",  # for production
     filemode="a",  # or "w" to overwrite each run
     level=logging.DEBUG,
     format="%(asctime)s [%(levelname)s] %(funcName)s:%(lineno)d: %(message)s",
@@ -216,9 +216,9 @@ def build_request(location: Location) -> dict:
     current_date = datetime.datetime.now().strftime("%Y%m%d")
     meal = Meals().get_upcoming_meal(location)
     request_data = {
-        "unit": {location},
-        "date": {current_date},
-        "meal": {meal},
+        "unit": location,
+        "date": current_date,
+        "meal": meal,
     }
     logging.info(
         "Building menu request for location=`%s`, date=`%s`, meal=`%s`.",
