@@ -581,9 +581,10 @@ if __name__ == "__main__":
                 SONG_INFO = ""
             elif now_playing and now_playing["elapsed"] <= 900:
                 SONG_INFO = (
-                    "-------------------\n"
-                    f"🎧 Now playing on WBOR(.org): {artist_name} -"
-                    f" {song_name} on ▶️ {playlist['title']} with 👤 {PERSONA_NAME}"
+                    "-------------------\n\n"
+                    f"🎧 Now playing on WBOR(.org):\n\n"
+                    f"🎤 {artist_name} - {song_name}\n\n"
+                    f"▶️ on the show {playlist['title']} with 👤 {PERSONA_NAME}"
                 )
                 logging.debug("Song info: `%s`", SONG_INFO)
             else:
