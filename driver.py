@@ -13,6 +13,7 @@ from pathlib import Path
 
 import requests
 from dotenv import load_dotenv
+from music_metadata_filter.filters import make_amazon_filter
 from tenacity import (
     retry,
     retry_if_exception_type,
@@ -47,6 +48,8 @@ else:
 
 MENU_API = os.getenv("MENU_API", "https://apps.bowdoin.edu/orestes/api.jsp")
 GROUPME_API = os.getenv("GROUPME_API", "https://api.groupme.com/v3/bots/post")
+
+METADATA_FILTER = make_amazon_filter()
 
 # ----------------------------------------------------------------------
 # CLOSED-STATE TRACKING
@@ -311,6 +314,31 @@ def parse_response(request_content: str) -> dict:
         logging.info("Menu is empty after sorting.")
         return None
 
+    # Add emojis before category headers
+    for key in list(sorted_menu.keys()):
+        if key == "Main Course":
+            sorted_menu["🍽️ " + key] = sorted_menu.pop(key)
+        elif key == "Desserts":
+            sorted_menu["🍰 " + key] = sorted_menu.pop(key)
+        elif key == "Starches":
+            sorted_menu["🍚 " + key] = sorted_menu.pop(key)
+        elif key == "Vegetables":
+            sorted_menu["🥦 " + key] = sorted_menu.pop(key)
+        elif key == "Soup":
+            sorted_menu["🍲 " + key] = sorted_menu.pop(key)
+        elif key == "Salads":
+            sorted_menu["🥗 " + key] = sorted_menu.pop(key)
+        elif key == "Breads":
+            sorted_menu["🍞 " + key] = sorted_menu.pop(key)
+        elif key == "Condiments":
+            sorted_menu["🧂 " + key] = sorted_menu.pop(key)
+        elif key == "Vegan Entree":
+            sorted_menu["🌱 " + key] = sorted_menu.pop(key)
+        elif key == "Deli":
+            sorted_menu["🥪 " + key] = sorted_menu.pop(key)
+        elif key == "Express Meal":
+            sorted_menu["🥡 " + key] = sorted_menu.pop(key)
+
     return sorted_menu
 
 
@@ -331,7 +359,7 @@ def stringify(location: Location, menu: dict) -> str:
 
     meal = Meals().get_upcoming_meal(location)
     timestamp = datetime.datetime.now().strftime("%d %b %Y")
-    loc_name = "Moulton Union" if location == Location.MOULTON else "Thorne"
+    loc_name = "🏠 Moulton Union" if location == Location.MOULTON else "🌲 Thorne"
 
     output_string = f"{loc_name} {meal.capitalize()} - {timestamp}:\n\n"
     for category, items in menu.items():
@@ -496,6 +524,15 @@ def get_current_playlist_details() -> dict:
     return None
 
 
+def clean_metadata_field(field_type: str, value: str) -> str:
+    """
+    Cleans up a single metadata field (artist, track) using music-metadata-filter.
+    """
+    if field_type not in ("artist", "track"):
+        raise ValueError(f"Unsupported field_type: {field_type}")
+    return METADATA_FILTER.filter_field(field_type, value).strip()
+
+
 if __name__ == "__main__":
     logging.info("Starting the menu retrieval script...")
 
@@ -528,13 +565,25 @@ if __name__ == "__main__":
             PERSONA_ID = playlist.get("persona_id") if playlist else None
             PERSONA_NAME = get_persona_name(PERSONA_ID) if PERSONA_ID else None
 
+            # Sanitize metadata using Amazon filter
+            song_name = now_playing.get("song", "")
+            artist_name = now_playing.get("artist", "")
+            if song_name:
+                song_name = clean_metadata_field("track", song_name)
+            if artist_name:
+                artist_name = clean_metadata_field("artist", artist_name)
+            logging.debug(
+                "Cleaned song name: `%s`, artist name: `%s`", song_name, artist_name
+            )
+
             if playlist and CURRENTLY_AUTOMATED:
                 logging.debug("Automation playlist detected; skipping song info.")
                 SONG_INFO = ""
             elif now_playing and now_playing["elapsed"] <= 900:
                 SONG_INFO = (
-                    f"Now playing on WBOR(.org): {now_playing.get('artist', '')} -"
-                    f" {now_playing['song']} on {playlist['title']} with {PERSONA_NAME}"
+                    "-------------------\n"
+                    f"🎧 Now playing on WBOR(.org): {artist_name} -"
+                    f" {song_name} on ▶️ {playlist['title']} with 👤 {PERSONA_NAME}"
                 )
                 logging.debug("Song info: `%s`", SONG_INFO)
             else:
