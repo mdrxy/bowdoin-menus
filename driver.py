@@ -338,6 +338,8 @@ def parse_response(request_content: str) -> dict:
             sorted_menu["🥪 " + key] = sorted_menu.pop(key)
         elif key == "Express Meal":
             sorted_menu["🥡 " + key] = sorted_menu.pop(key)
+        elif key == "Display":
+            sorted_menu["👀 " + key] = sorted_menu.pop(key)
 
     return sorted_menu
 
