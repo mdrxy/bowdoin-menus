@@ -315,6 +315,10 @@ def parse_response(request_content: str) -> dict:
         return None
 
     # Add emojis before category headers
+    # This list has been constructed from observing historical responses
+    # from the menu API. It may need to be updated if the API changes.
+    # Unfortunately, the API does not provide a list of categories.
+    # This is a best-effort approach.
     for key in list(sorted_menu.keys()):
         if key == "Main Course":
             sorted_menu["🍽️ " + key] = sorted_menu.pop(key)
