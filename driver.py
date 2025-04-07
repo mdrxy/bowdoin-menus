@@ -1,6 +1,15 @@
 """
 Module to retrieve and send the current menu for Moulton Union and
 Thorne Hall.
+
+Author: Mason Daugherty <@mdrxy>
+Version: 1.1.1
+Last Modified: 2025-04-06
+
+Changelog:
+    - 1.0.0 (2024-04-02): Initial release.
+    - 1.1.0 (2024-04-06): Refactoring.
+    - 1.1.1 (2025-04-07): Emoji support and WBOR song info.
 """
 
 import datetime
@@ -488,7 +497,8 @@ def get_persona_name(p_id: int) -> str:
 
 def get_current_playlist_details() -> dict:
     """
-    Get the most recent playlist from a Spinitron API proxy (WBOR's) with retry logic.
+    Get the most recent playlist from a Spinitron API proxy (WBOR's)
+    with retry logic.
     """
     url = SPINITRON_PROXY_BASE + "/playlists"
     logging.info("Retrieving currently playing playlist from `%s`", url)
@@ -534,7 +544,8 @@ def get_current_playlist_details() -> dict:
 
 def clean_metadata_field(field_type: str, value: str) -> str:
     """
-    Cleans up a single metadata field (artist, track) using music-metadata-filter.
+    Cleans up a single metadata field (artist, track) using
+    music-metadata-filter.
     """
     if field_type not in ("artist", "track"):
         raise ValueError(f"Unsupported field_type: {field_type}")
