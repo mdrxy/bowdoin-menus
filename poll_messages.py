@@ -1,3 +1,7 @@
+"""
+Script to fetch and log the last 20 messages from a GroupMe group.
+"""
+
 import datetime
 import logging
 import os
@@ -33,7 +37,7 @@ def fetch_previous_messages(api_url):
     try:
         response = requests.get(api_url, timeout=10)
         if response.status_code != 200:
-            logging.error("Error fetching messages: %s", response.status_code)
+            logging.error("Error fetching messages: `%s`", response.status_code)
             return
         data = response.json()
         messages = data.get("response", {}).get("messages", [])
@@ -45,12 +49,16 @@ def fetch_previous_messages(api_url):
                 text = msg.get("text", "")
                 created = datetime.datetime.fromtimestamp(msg.get("created_at", 0))
                 logging.info(
-                    "Message `%s` from %s at %s: %s", msg_id, sender, created, text
+                    "Message `%s` from `%s` at `%s`: `%s`",
+                    msg_id,
+                    sender,
+                    created,
+                    text,
                 )
         else:
             logging.info("No messages returned from API.")
-    except Exception as e:
-        logging.error("Exception during request: %s", e)
+    except requests.exceptions.RequestException as e:
+        logging.error("Exception during request: `%s`", e)
 
 
 if __name__ == "__main__":

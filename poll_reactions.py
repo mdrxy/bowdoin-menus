@@ -1,3 +1,7 @@
+"""
+Monitor a GroupMe message for new likes and trigger a callback function.
+"""
+
 import logging
 import os
 import sys
@@ -29,7 +33,7 @@ def like_callback(message, new_like_count, old_like_count):
     Callback function to handle new likes on a message.
     """
     logger.info(
-        "Message %s has new likes: now %d (was %d)",
+        "Message `%s` has new likes: now %d (was %d)",
         message.get("id"),
         new_like_count,
         old_like_count,
@@ -55,7 +59,7 @@ def poll_message_for_likes(group_id, message_id, callback, poll_interval=30):
         try:
             response = requests.get(base_url, timeout=10)
             if response.status_code != 200:
-                logger.error("Error fetching messages: %s", response.status_code)
+                logger.error("Error fetching messages: `%s`", response.status_code)
             else:
                 data = response.json()
                 messages = data.get("response", {}).get("messages", [])
@@ -70,10 +74,10 @@ def poll_message_for_likes(group_id, message_id, callback, poll_interval=30):
                         break
                 else:
                     logger.warning(
-                        "Message ID %s not found in the latest fetch.", message_id
+                        "Message ID `%s` not found in the latest fetch.", message_id
                     )
-        except Exception as e:
-            logger.error("Exception during polling: %s", e)
+        except requests.exceptions.RequestException as e:
+            logger.error("Exception during polling: `%s`", e)
 
         time.sleep(poll_interval)
 
