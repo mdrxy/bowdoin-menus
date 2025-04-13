@@ -5,6 +5,7 @@ Handles Spinitron API calls.
 import datetime
 import json
 import logging
+from typing import Union
 
 import requests
 
@@ -12,7 +13,7 @@ from config import SPINITRON_PROXY_BASE
 from utils import make_get_request
 
 
-def get_current_spin_details() -> dict | None:
+def get_current_spin_details() -> Union[dict, None]:
     """
     Get the most recent spin from a Spinitron API proxy (WBOR's) with
     retry logic.
@@ -69,7 +70,7 @@ def get_current_spin_details() -> dict | None:
     return None
 
 
-def get_persona_name(p_id: int) -> str | None:
+def get_persona_name(p_id: int) -> Union[str, None]:
     """
     Get the persona name from an ID using a Spinitron API proxy (WBOR's)
     with retry logic.
@@ -95,7 +96,7 @@ def get_persona_name(p_id: int) -> str | None:
     return None
 
 
-def get_current_playlist_details() -> dict | None:
+def get_current_playlist_details() -> Union[dict, None]:
     """
     Get the most recent playlist from a Spinitron API proxy (WBOR's)
     with retry logic.

@@ -6,6 +6,7 @@ import datetime
 import logging
 import re
 import xml.etree.ElementTree as ET
+from typing import Union
 
 import requests
 
@@ -34,7 +35,7 @@ def build_request(location: Location) -> dict:
     return request_data
 
 
-def request(location: Location) -> str | None:
+def request(location: Location) -> Union[bytes, None]:
     """
     Makes a POST request to the menu API with retry logic.
     """
@@ -83,7 +84,7 @@ def build_menu(course_values: list, item_names: list) -> dict:
     return menu
 
 
-def sort_and_emoji_menu(menu: dict) -> dict | None:
+def sort_and_emoji_menu(menu: dict) -> Union[dict, None]:
     """
     Sorts menu keys so that custom ordered categories come first, and
     adds corresponding emoji prefixes.
@@ -118,7 +119,7 @@ def sort_and_emoji_menu(menu: dict) -> dict | None:
     return sorted_menu
 
 
-def parse_response(request_content: str) -> dict | None:
+def parse_response(request_content: str) -> Union[dict, None]:
     """
     Parses the XML response from the menu API and returns a dictionary
     like:

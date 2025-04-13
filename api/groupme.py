@@ -4,6 +4,7 @@ Handles sending messages to a GroupMe bot.
 
 import json
 import logging
+from typing import Union
 
 import requests
 
@@ -11,7 +12,7 @@ from config import BOT_ID, GROUPME_API
 from utils import make_post_request
 
 
-def send_message(message_text: str) -> requests.Response | None:
+def send_message(message_text: str) -> Union[requests.Response, None]:
     """
     Sends a message to GroupMe via POST with retry logic.
     """
