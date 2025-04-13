@@ -3,3 +3,5 @@
 /venv
 closed_state.txt
 bowdoin_menus.log
+__pycache__
+*.pyc
