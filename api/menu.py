@@ -112,6 +112,7 @@ def sort_and_emoji_menu(menu: dict) -> Union[dict, None]:
         "Display": "👀",
         "Other": "❓",
         "Passover": "🍷",
+        "Appetizer/ Fruit/ Juices:": "🍏",
     }
     for key in list(sorted_menu.keys()):
         if key in emoji_map:
