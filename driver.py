@@ -49,6 +49,8 @@ if __name__ == "__main__":
     if not thorne_text and not moulton_text:
         if not has_closed_message_already_been_sent():
             logging.info("Both dining halls appear closed, sending closed message...")
+            logging.debug("Full Thorne API response: %s", thorne_xml)
+            logging.debug("Full Moulton API response: %s", moulton_xml)
             send_message("The campus dining halls seem to be closed.")
             set_closed_message_sent()
         else:
