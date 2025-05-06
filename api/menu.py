@@ -56,18 +56,44 @@ def extract_records(root: ET.Element) -> tuple:
     """
     Extracts course values and item names from the XML root. Returns a
     tuple: (course_values, item_names).
+
+    Example:
+    <record>
+        <course>Main Course</course>
+        <webLongName>Grilled Chicken</webLongName>
+    </record>
+    <record>
+        <course>Desserts</course>
+        <webLongName>Chocolate Cake</webLongName>
+    </record>
+
+    ->
+
+    (
+        ['Main Course', 'Desserts'],
+        ['Grilled Chicken', 'Chocolate Cake']
+    )
     """
     course_values = []
     item_names = []
+
     for record in root.findall(".//record"):
+
+        # The course this item belongs to
         course_element = record.find("course")
         course_text = (
-            course_element.text if course_element is not None else "Uncategorized"
+            course_element.text
+            if course_element is not None
+            else "Uncategorized Course"
         )
+
+        # The name of the item
         web_long_name_element = record.find("webLongName")
         item = web_long_name_element.text if web_long_name_element is not None else None
+
         course_values.append(course_text)
         item_names.append(item)
+
     return course_values, item_names
 
 
@@ -76,27 +102,49 @@ def build_menu(course_values: list, item_names: list) -> dict:
     Builds a menu dictionary from course_values and item_names. Cleans
     up consecutive spaces in item names.
     """
+
+    # Initialize the menu dictionary with unique meal course values as
+    # keys and empty lists as values (to be populated with item names)
     menu = {key: [] for key in set(course_values)}
+
+    # Iterate over item names and their corresponding course values
     for idx, item in enumerate(item_names):
         if item:
+            # Remove any consecutive spaces in item names
+            # e.g. "Grilled  Chicken" -> "Grilled Chicken"
             item = re.sub(r"\s+", " ", item)
+
+        # Append the cleaned item to the corresponding course in menu
         menu[course_values[idx]].append(item)
+
+    # If any course has no items, remove it from the menu
+    for key in list(menu.keys()):
+        if not menu[key]:
+            del menu[key]
+    # If the menu is empty after removing empty courses, log a critical error
+    if not menu:
+        logging.critical("Menu is empty after building from records...")
+        return None
+
+    # Return the constructed menu dictionary
     return menu
 
 
 def sort_and_emoji_menu(menu: dict) -> Union[dict, None]:
     """
-    Sorts menu keys so that custom ordered categories come first, and
-    adds corresponding emoji prefixes.
+    Sorts menu keys (categories) to a custom order, and add
+    corresponding emoji prefixes.
     """
-    custom_order = ["Main Course", "Desserts"]
+    custom_order = ["Main Course", "Desserts"]  # Desserts AFTER main
     sorted_menu = {key: menu[key] for key in custom_order if key in menu}
     for key in menu:
         if key not in sorted_menu:
             sorted_menu[key] = menu[key]
     if not any(sorted_menu.values()):
-        logging.info("Menu is empty after sorting.")
+        logging.critical("Menu is empty after sorting...")
         return None
+
+    # Add emojis to the menu keys
     emoji_map = {
         "Main Course": "🍽️",
         "Desserts": "🍰",
@@ -116,7 +164,9 @@ def sort_and_emoji_menu(menu: dict) -> Union[dict, None]:
     }
     for key in list(sorted_menu.keys()):
         if key in emoji_map:
+            # Substituting in the emoji'd version, removing the old key
             sorted_menu[emoji_map[key] + " " + key] = sorted_menu.pop(key)
+
     return sorted_menu
 
 
