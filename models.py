@@ -5,6 +5,8 @@ Models.
 import datetime
 import logging
 
+logger = logging.getLogger(__name__)
+
 
 class Location:  # pylint: disable=too-few-public-methods
     """
@@ -33,7 +35,7 @@ class Meals:  # pylint: disable=too-few-public-methods
         """
         current_hour = datetime.datetime.now().time().hour
         current_day = datetime.datetime.now().strftime("%a").lower()
-        logging.debug(
+        logger.debug(
             "Determining upcoming meal for location=`%s`, day=`%s`, hour=`%s`",
             location,
             current_day,
@@ -136,5 +138,5 @@ class Meals:  # pylint: disable=too-few-public-methods
                     return special_meal
                 return default_meal
 
-        logging.debug("Meal not found in normal schedule, defaulting to BREAKFAST.")
+        logger.debug("Meal not found in normal schedule, defaulting to BREAKFAST.")
         return Meals.BREAKFAST

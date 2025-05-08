@@ -10,6 +10,8 @@ import time
 import requests
 from dotenv import load_dotenv
 
+logger = logging.getLogger(__name__)
+
 load_dotenv()
 
 BOT_ID = os.getenv("BOT_ID")
@@ -20,12 +22,12 @@ if not BOT_ID or not ACCESS_TOKEN or not GROUP_ID:
         "Please set the BOT_ID, ACCESS_TOKEN, and GROUP_ID environment variables."
     )
 
-logging.basicConfig(
-    level=logging.DEBUG,
+logger.basicConfig(
+    level=logger.DEBUG,
     stream=sys.stdout,
     format="%(asctime)s [%(levelname)s] %(funcName)s:%(lineno)d: %(message)s",
 )
-logger = logging.getLogger(__name__)
+logger = logger.getLogger(__name__)
 
 
 def like_callback(message, new_like_count, old_like_count):

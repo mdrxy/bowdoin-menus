@@ -8,6 +8,8 @@ import os
 from dotenv import load_dotenv
 from music_metadata_filter.filters import make_amazon_filter
 
+logger = logging.getLogger(__name__)
+
 # Load environment variables
 load_dotenv()
 

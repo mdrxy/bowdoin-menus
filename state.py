@@ -8,6 +8,8 @@ from pathlib import Path
 
 from config import CLOSED_STATE_FILE
 
+logger = logging.getLogger(__name__)
+
 
 def has_closed_message_already_been_sent():
     """
@@ -21,7 +23,7 @@ def set_closed_message_sent():
     """
     Creates a file to indicate that we have sent the 'closed' message.
     """
-    logging.info("Setting closed-state file to mark 'closed' message as sent.")
+    logger.info("Setting closed-state file to mark 'closed' message as sent.")
     with open(CLOSED_STATE_FILE, "w", encoding="utf-8") as f:
         f.write("CLOSED")
 
@@ -32,5 +34,5 @@ def clear_closed_message_state():
     closed message again in the future if needed.
     """
     if Path(CLOSED_STATE_FILE).exists():
-        logging.info("Removing closed-state file to allow future 'closed' messages.")
+        logger.info("Removing closed-state file to allow future 'closed' messages.")
         os.remove(CLOSED_STATE_FILE)

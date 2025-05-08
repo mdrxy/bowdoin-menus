@@ -14,6 +14,8 @@ from config import MENU_API
 from models import Location, Meals
 from utils import make_post_request
 
+logger = logging.getLogger(__name__)
+
 
 def build_request(location: Location) -> dict:
     """
@@ -26,7 +28,7 @@ def build_request(location: Location) -> dict:
         "date": current_date,
         "meal": meal,
     }
-    logging.info(
+    logger.info(
         "Building menu request for location=`%s`, date=`%s`, meal=`%s`",
         location,
         current_date,
@@ -40,15 +42,15 @@ def request(location: Location) -> Union[bytes, None]:
     Makes a POST request to the menu API with retry logic.
     """
     data = build_request(location)
-    logging.info("Sending POST request to the menu API for location=`%s`", location)
+    logger.info("Sending POST request to the menu API for location=`%s`", location)
     try:
         response = make_post_request(MENU_API, data)
         if response.status_code == 200:
-            logging.debug("Received a 200 OK from menu API.")
+            logger.debug("Received a 200 OK from menu API.")
             return response.content
-        logging.error("Error calling menu API: `%s`", response.status_code)
+        logger.error("Error calling menu API: `%s`", response.status_code)
     except requests.exceptions.RequestException as e:
-        logging.error("Failed to retrieve menu data: `%s`", e)
+        logger.error("Failed to retrieve menu data: `%s`", e)
     return None
 
 
@@ -123,7 +125,7 @@ def build_menu(course_values: list, item_names: list) -> dict:
             del menu[key]
     # If the menu is empty after removing empty courses, log a critical error
     if not menu:
-        logging.critical("Menu is empty after building from records...")
+        logger.critical("Menu is empty after building from records...")
         return None
 
     # Return the constructed menu dictionary
@@ -141,7 +143,7 @@ def sort_and_emoji_menu(menu: dict) -> Union[dict, None]:
         if key not in sorted_menu:
             sorted_menu[key] = menu[key]
     if not any(sorted_menu.values()):
-        logging.critical("Menu is empty after sorting...")
+        logger.critical("Menu is empty after sorting...")
         return None
 
     # Add emojis to the menu keys
@@ -178,15 +180,15 @@ def parse_response(request_content: str) -> Union[dict, None]:
 
     Returns None if no data or an error is encountered.
     """
-    logging.debug("Parsing XML response from the menu API.")
+    logger.debug("Parsing XML response from the menu API.")
     try:
         root = ET.fromstring(request_content)
     except ET.ParseError as e:
-        logging.error("Failed to parse XML response: `%s`", e)
+        logger.error("Failed to parse XML response: `%s`", e)
         return None
 
     if root.find(".//error") is not None:
-        logging.info("No records found (or error) in the XML response.")
+        logger.info("No records found (or error) in the XML response.")
         return None
 
     course_values, item_names = extract_records(root)

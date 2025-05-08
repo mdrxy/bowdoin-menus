@@ -10,6 +10,8 @@ import sys
 import requests
 from dotenv import load_dotenv
 
+logger = logging.getLogger(__name__)
+
 load_dotenv()
 
 BOT_ID = os.getenv("BOT_ID")
@@ -20,8 +22,8 @@ if not BOT_ID or not ACCESS_TOKEN or not GROUP_ID:
         "Please set the BOT_ID, ACCESS_TOKEN, and GROUP_ID environment variables."
     )
 
-logging.basicConfig(
-    level=logging.INFO,
+logger.basicConfig(
+    level=logger.INFO,
     stream=sys.stdout,
     format="%(asctime)s [%(levelname)s] %(funcName)s:%(lineno)d: %(message)s",
     datefmt="%Y-%m-%d %H:%M:%S",
@@ -37,7 +39,7 @@ def fetch_previous_messages(api_url):
     try:
         response = requests.get(api_url, timeout=10)
         if response.status_code != 200:
-            logging.error("Error fetching messages: `%s`", response.status_code)
+            logger.error("Error fetching messages: `%s`", response.status_code)
             return
         data = response.json()
         messages = data.get("response", {}).get("messages", [])
@@ -48,7 +50,7 @@ def fetch_previous_messages(api_url):
                 sender = msg.get("name", "Unknown Sender")
                 text = msg.get("text", "")
                 created = datetime.datetime.fromtimestamp(msg.get("created_at", 0))
-                logging.info(
+                logger.info(
                     "Message `%s` from `%s` at `%s`: `%s`",
                     msg_id,
                     sender,
@@ -56,9 +58,9 @@ def fetch_previous_messages(api_url):
                     text,
                 )
         else:
-            logging.info("No messages returned from API.")
+            logger.info("No messages returned from API.")
     except requests.exceptions.RequestException as e:
-        logging.error("Exception during request: `%s`", e)
+        logger.error("Exception during request: `%s`", e)
 
 
 if __name__ == "__main__":
