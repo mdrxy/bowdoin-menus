@@ -40,10 +40,14 @@ if __name__ == "__main__":
 
     thorne_xml = request(Location.THORNE)
     moulton_xml = request(Location.MOULTON)
-    thorne_menu = parse_response(thorne_xml) if thorne_xml else None
-    moulton_menu = parse_response(moulton_xml) if moulton_xml else None
-    thorne_text = stringify(Location.THORNE, thorne_menu)
-    moulton_text = stringify(Location.MOULTON, moulton_menu)
+    thorne_menu = parse_response(thorne_xml.decode("utf-8")) if thorne_xml else None
+    moulton_menu = parse_response(moulton_xml.decode("utf-8")) if moulton_xml else None
+    thorne_text = (
+        stringify(Location.THORNE, thorne_menu) if thorne_menu is not None else ""
+    )
+    moulton_text = (
+        stringify(Location.MOULTON, moulton_menu) if moulton_menu is not None else ""
+    )
 
     # Check if both are empty => closed logic
     if not thorne_text and not moulton_text:
@@ -70,8 +74,8 @@ if __name__ == "__main__":
             PERSONA_NAME = get_persona_name(PERSONA_ID) if PERSONA_ID else None
 
             # Sanitize metadata using Amazon filter
-            song_name = now_playing.get("song", "")
-            artist_name = now_playing.get("artist", "")
+            song_name = now_playing.get("song", "") if now_playing else ""
+            artist_name = now_playing.get("artist", "") if now_playing else ""
             if song_name:
                 song_name = clean_metadata_field("track", song_name)
             if artist_name:
@@ -84,11 +88,16 @@ if __name__ == "__main__":
                 logging.debug("Automation playlist detected; skipping song info.")
                 SONG_INFO = ""
             elif now_playing and now_playing["elapsed"] <= 900:
+                show_title = (
+                    playlist["title"]
+                    if playlist and "title" in playlist
+                    else "Unknown Show"
+                )
                 SONG_INFO = (
                     "-------------------\n\n"
                     f"🎧 Now playing on WBOR(.org):\n\n"
                     f"🎤 {artist_name} - {song_name}\n\n"
-                    f"▶️ on the show {playlist['title']} with 👤 {PERSONA_NAME}"
+                    f"▶️ on the show {show_title} with 👤 {PERSONA_NAME}"
                 )
                 logging.debug("Song info: `%s`", SONG_INFO)
             else:

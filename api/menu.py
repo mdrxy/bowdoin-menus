@@ -11,38 +11,60 @@ from typing import Union
 import requests
 
 from config import MENU_API
-from models import Location, Meals
+from models import Meals
 from utils import make_post_request
 
 logger = logging.getLogger(__name__)
 
 
-def build_request(location: Location) -> dict:
+def build_request(location_int: int) -> dict:
     """
     Builds the request data to be sent to the menu API.
+
+    Parameters:
+    - location (int): The location ID for the menu request.
+
+    Returns:
+    - dict: The request data containing the unit, date, and meal type.
     """
-    current_date = datetime.datetime.now().strftime("%Y%m%d")
-    meal = Meals().get_upcoming_meal(location)
+    now = datetime.datetime.now()
+
+    # Correctly unpack the meal type string and the integer offset
+    meal_name_str, date_offset_as_int = Meals().get_upcoming_meal(location_int)
+
+    # Use the integer offset to calculate the target date
+    target_date = now + datetime.timedelta(days=date_offset_as_int)
+    request_date_str = target_date.strftime(
+        "%Y%m%d"
+    )  # This will now be the correct date
+
     request_data = {
-        "unit": location,
-        "date": current_date,
-        "meal": meal,
+        "unit": location_int,
+        "date": request_date_str,  # Use the calculated, potentially future, date
+        "meal": meal_name_str,  # Use only the meal name string here
     }
     logger.info(
         "Building menu request for location=`%s`, date=`%s`, meal=`%s`",
-        location,
-        current_date,
-        meal,
+        location_int,
+        request_date_str,  # Log the correct date
+        meal_name_str,  # Log the meal name string
     )
     return request_data
 
 
-def request(location: Location) -> Union[bytes, None]:
+def request(location_int: int) -> Union[bytes, None]:
     """
     Makes a POST request to the menu API with retry logic.
+
+    Parameters:
+    - location (Location): The location ID for the menu request.
+
+    Returns:
+    - bytes: The response content from the menu API, or None if an error
+        occurs.
     """
-    data = build_request(location)
-    logger.info("Sending POST request to the menu API for location=`%s`", location)
+    data = build_request(location_int)
+    logger.info("Sending POST request to the menu API for location=`%s`", location_int)
     try:
         response = make_post_request(MENU_API, data)
         if response.status_code == 200:
@@ -58,6 +80,14 @@ def extract_records(root: ET.Element) -> tuple:
     """
     Extracts course values and item names from the XML root. Returns a
     tuple: (course_values, item_names).
+
+    Parameters:
+    - root (ET.Element): The root element of the XML response.
+
+    Returns:
+    - tuple: A tuple containing two lists:
+        - course_values: A list of course names.
+        - item_names: A list of item names.
 
     Example:
     <record>
@@ -103,6 +133,14 @@ def build_menu(course_values: list, item_names: list) -> dict:
     """
     Builds a menu dictionary from course_values and item_names. Cleans
     up consecutive spaces in item names.
+
+    Parameters:
+    - course_values (list): A list of course names.
+    - item_names (list): A list of item names.
+
+    Returns:
+    - dict: A dictionary where keys are course names and values are
+        lists of item names.
     """
 
     # Initialize the menu dictionary with unique meal course values as
@@ -126,7 +164,7 @@ def build_menu(course_values: list, item_names: list) -> dict:
     # If the menu is empty after removing empty courses, log a critical error
     if not menu:
         logger.critical("Menu is empty after building from records...")
-        return None
+        return {}
 
     # Return the constructed menu dictionary
     return menu
@@ -136,6 +174,12 @@ def sort_and_emoji_menu(menu: dict) -> Union[dict, None]:
     """
     Sorts menu keys (categories) to a custom order, and add
     corresponding emoji prefixes.
+
+    Parameters:
+    - menu (dict): The menu dictionary to be sorted and emoji'd.
+
+    Returns:
+    - dict: The sorted menu dictionary with emoji prefixes.
     """
     custom_order = ["Main Course", "Desserts"]  # Desserts AFTER main
     sorted_menu = {key: menu[key] for key in custom_order if key in menu}
@@ -178,7 +222,12 @@ def parse_response(request_content: str) -> Union[dict, None]:
     like:
     { '🍽️ Main Course': [...], '🍰 Desserts': [...], ... }.
 
-    Returns None if no data or an error is encountered.
+    Parameters:
+    - request_content (str): The XML response content from the menu API.
+
+    Returns:
+    - dict: The parsed menu dictionary with emoji prefixes, or None if
+        an error occurs.
     """
     logger.debug("Parsing XML response from the menu API.")
     try:
