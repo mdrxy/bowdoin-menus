@@ -74,14 +74,14 @@ if __name__ == "__main__":
             PERSONA_NAME = get_persona_name(PERSONA_ID) if PERSONA_ID else None
 
             # Sanitize metadata using Amazon filter
-            song_name = now_playing.get("song", "") if now_playing else ""
-            artist_name = now_playing.get("artist", "") if now_playing else ""
-            if song_name:
-                song_name = clean_metadata_field("track", song_name)
-            if artist_name:
-                artist_name = clean_metadata_field("artist", artist_name)
+            SONG_NAME = now_playing.get("song", "") if now_playing else ""
+            ARTIST_NAME = now_playing.get("artist", "") if now_playing else ""
+            if SONG_NAME:
+                SONG_NAME = clean_metadata_field("track", SONG_NAME)
+            if ARTIST_NAME:
+                ARTIST_NAME = clean_metadata_field("artist", ARTIST_NAME)
             logging.debug(
-                "Cleaned song name: `%s`, artist name: `%s`", song_name, artist_name
+                "Cleaned song name: `%s`, artist name: `%s`", SONG_NAME, ARTIST_NAME
             )
 
             if playlist and CURRENTLY_AUTOMATED:
@@ -96,7 +96,7 @@ if __name__ == "__main__":
                 SONG_INFO = (
                     "-------------------\n\n"
                     f"🎧 Now playing on WBOR(.org):\n\n"
-                    f"🎤 {artist_name} - {song_name}\n\n"
+                    f"🎤 {ARTIST_NAME} - {SONG_NAME}\n\n"
                     f"▶️ on the show {show_title} with 👤 {PERSONA_NAME}"
                 )
                 logging.debug("Song info: `%s`", SONG_INFO)
