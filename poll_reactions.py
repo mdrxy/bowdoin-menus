@@ -85,6 +85,8 @@ def poll_message_for_likes(group_id, message_id, callback, poll_interval=30):
 
 
 if __name__ == "__main__":
-    MSG_ID = "174399734092226471"
+    MSG_ID = (
+        "your_message_id_here"  # Replace with the actual message ID you want to monitor
+    )
 
     poll_message_for_likes(GROUP_ID, MSG_ID, like_callback, poll_interval=3)

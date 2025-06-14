@@ -20,7 +20,6 @@ def stringify(location_int: int, menu: dict) -> str:
         logger.debug("Menu dictionary is empty for location=`%s`.", location_int)
         return ""
 
-    # Unpack the tuple: we only need the meal name string here
     meal_name_str, _ = Meals().get_upcoming_meal(location_int)
 
     timestamp = datetime.datetime.now().strftime("%d %b %Y")

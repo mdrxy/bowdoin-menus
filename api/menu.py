@@ -145,7 +145,7 @@ def build_menu(course_values: list, item_names: list) -> dict:
 
     # Initialize the menu dictionary with unique meal course values as
     # keys and empty lists as values (to be populated with item names)
-    menu = {key: [] for key in set(course_values)}
+    menu: dict[str, list[str]] = {key: [] for key in set(course_values)}
 
     # Iterate over item names and their corresponding course values
     for idx, item in enumerate(item_names):
@@ -161,12 +161,10 @@ def build_menu(course_values: list, item_names: list) -> dict:
     for key in list(menu.keys()):
         if not menu[key]:
             del menu[key]
-    # If the menu is empty after removing empty courses, log a critical error
     if not menu:
         logger.critical("Menu is empty after building from records...")
         return {}
 
-    # Return the constructed menu dictionary
     return menu
 
 

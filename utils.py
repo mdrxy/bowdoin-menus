@@ -17,7 +17,9 @@ from tenacity import (
     retry=retry_if_exception_type(requests.exceptions.RequestException),
 )
 def make_post_request(url, data, headers=None, timeout=10):
-    """Helper function to make a POST request with retry logic."""
+    """
+    Make a POST request with retry logic.
+    """
     return requests.post(url, data=data, headers=headers, timeout=timeout)
 
 
@@ -27,5 +29,7 @@ def make_post_request(url, data, headers=None, timeout=10):
     retry=retry_if_exception_type(requests.exceptions.RequestException),
 )
 def make_get_request(url, timeout=10):
-    """Helper function to make a GET request with retry logic."""
+    """
+    Make a GET request with retry logic.
+    """
     return requests.get(url, timeout=timeout)

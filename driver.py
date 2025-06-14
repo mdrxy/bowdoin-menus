@@ -36,7 +36,7 @@ from state import (
 
 
 if __name__ == "__main__":
-    logging.info("Starting the menu retrieval script...")
+    logging.info("Starting menu retrieval...")
 
     thorne_xml = request(Location.THORNE)
     moulton_xml = request(Location.MOULTON)
@@ -52,7 +52,7 @@ if __name__ == "__main__":
     # Check if both are empty => closed logic
     if not thorne_text and not moulton_text:
         if not has_closed_message_already_been_sent():
-            logging.info("Both dining halls appear closed, sending closed message...")
+            logging.info("Both dining halls appear closed, sending closed message")
             logging.debug("Full Thorne API response: %s", thorne_xml)
             logging.debug("Full Moulton API response: %s", moulton_xml)
             send_message("The campus dining halls seem to be closed.")
@@ -62,7 +62,7 @@ if __name__ == "__main__":
                 "Both dining halls still appear closed, but closed message has already been sent."
             )
     else:
-        logging.info("At least one dining hall has data; clearing closed state...")
+        logging.info("At least one dining hall has data; clearing closed state")
         clear_closed_message_state()
 
         try:
@@ -139,5 +139,4 @@ if __name__ == "__main__":
                         "`%s` text is too long to send (>1000 chars).",
                         label,
                     )
-                    # Print so that we get an email from cron
                     print(f"{label} text is too long to send (>1000 chars).")

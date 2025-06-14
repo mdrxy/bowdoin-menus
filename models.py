@@ -34,8 +34,8 @@ class Meals:  # pylint: disable=too-few-public-methods
         During a meal period, it is still 'upcoming'.
         Only handles whole hours, so 12:30 p.m. is rounded up to 1 p.m.
         Returns a tuple: (meal_type: str, date_offset_days: int)
-        date_offset_days is 0 if the meal is for the current calendar day,
-        1 if it's for the next calendar day.
+        date_offset_days is 0 if the meal is for the current calendar
+        day, 1 if it's for the next calendar day.
         """
         now = datetime.datetime.now()
         h = now.hour
