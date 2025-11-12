@@ -199,6 +199,7 @@ def sort_and_emoji_menu(menu: dict) -> Union[dict, None]:
         "Breads": "🍞",
         "Condiments": "🧂",
         "Vegan Entree": "🌱",
+        "Vegetarian Entree": "🚫🥩",
         "Deli": "🥪",
         "Express Meal": "🥡",
         "Display": "👀",
