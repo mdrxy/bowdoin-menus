@@ -152,7 +152,7 @@ def build_menu(course_values: list, item_names: list) -> dict:
         if item:
             # Remove any consecutive spaces in item names
             # e.g. "Grilled  Chicken" -> "Grilled Chicken"
-            item = re.sub(r"\s+", " ", item)
+            item = re.sub(r"\s+", " ", item).strip()
 
         # Append the cleaned item to the corresponding course in menu
         menu[course_values[idx]].append(item)
